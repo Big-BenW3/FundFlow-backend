@@ -1,0 +1,26 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.uv/
+
+# env / secrets (never commit)
+.env
+.env.*
+
+# sqlite dev + test artefacts
+*.db
+*.db-journal
+*.sqlite3
+
+# pytest / tooling
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# alembic local overrides
+alembic.ini.local
