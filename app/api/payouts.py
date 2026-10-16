@@ -2,6 +2,7 @@
 
 GET /campaigns/{id}/payouts · GET /payouts/{id}
 POST /payouts/{id}/approve · POST /payouts/{id}/execute
+POST /payouts/{id}/verify — resolve PROCESSING/UNKNOWN via Kora query
 """
 
 from __future__ import annotations
@@ -68,5 +69,28 @@ def execute_payout(
         actor=user,
         background_tasks=background_tasks,
     )
+    db.refresh(payout)
+    return payout_out(payout)
+
+
+@router.post("/payouts/{payout_id}/verify")
+def verify_payout(payout_id: int, db: DBSession, user: CurrentUser):
+    """Resolve a PROCESSING/UNKNOWN payout by querying Kora (§26).
+
+    Gives ops (and the frontend) a manual driver besides the async
+    transfer webhook and the retryable-exception path.
+    """
+    payout = db.get(Payout, payout_id)
+    if payout is None:
+        raise HTTPException(status_code=404, detail="Payout not found")
+    campaign = campaign_service.get_campaign(db, payout.campaign_id)
+    campaign_service.require_write(db, campaign, user)
+    if payout.status not in ("PROCESSING", "UNKNOWN"):
+        raise HTTPException(
+            status_code=409, detail=f"Payout is {payout.status}, nothing to verify"
+        )
+    if not payout.kora_reference:
+        raise HTTPException(status_code=409, detail="Payout has no Kora reference yet")
+    payout = payout_service.verify_and_settle(db, payout=payout, campaign=campaign)
     db.refresh(payout)
     return payout_out(payout)

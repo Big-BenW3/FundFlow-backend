@@ -85,7 +85,7 @@ def _process(db: Session, payload: dict) -> dict:
     if event.startswith("charge."):
         result = contribution_service.process_charge_event(db, data, event)
         if result.get("status") == "processed":
-            campaign_id = _campaign_for_contribution(db, reference)
+            campaign_id = result.get("campaign_id") or _campaign_for_contribution(db, reference)
             if campaign_id is not None:
                 _reevaluate(db, campaign_id)  # triggers §25 / §12
     elif event.startswith("transfer."):
@@ -152,6 +152,26 @@ def _process_refund(db: Session, data: dict, event: str) -> dict:
         return {"status": "duplicate"}
     if event == "refund.failed":
         return {"status": "refund_failed"}
+
+    # Rule 2: verify against Kora before reversing the ledger — same as
+    # charge/transfer paths. Retryable (transport/5xx) stays unmarked so a
+    # later retry/reconcile can settle it.
+    from app.integrations.kora import KoraAPIError, get_kora_client
+
+    try:
+        verified = get_kora_client().verify_transaction(str(reference))
+    except KoraAPIError as exc:
+        if exc.retryable:
+            return {"status": "verification_retry"}
+        return {"status": "verification_failed"}
+    try:
+        provider_amount = Decimal(str(verified.get("amount")))
+    except Exception:
+        return {"status": "verification_failed"}
+    if provider_amount != contribution.amount or str(
+        verified.get("currency", contribution.currency)
+    ) != contribution.currency:
+        return {"status": "verification_failed"}
 
     campaign = db.get(Campaign, contribution.campaign_id)
     contribution.status = "REFUNDED"

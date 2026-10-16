@@ -83,10 +83,14 @@ DATABASE_URL=sqlite:///fundflow.db
 # DATABASE_URL=postgresql://user:password@localhost/fundflow
 
 # Kora Configuration
-KORA_BASE_URL=https://api.getkora.com
-KORA_API_KEY=your_kora_api_key
+KORA_BASE_URL=https://api.korapay.com/merchant/api/v1
+KORA_SECRET_KEY=your_kora_secret_key
+KORA_PUBLIC_KEY=your_kora_public_key
 KORA_WEBHOOK_SECRET=your_webhook_secret
-KORA_MOCK=false
+KORA_MODE=mock
+# Live VBA provisioning (live only; mock keeps bank 000 / no BVN)
+KORA_BANK_CODE=000
+KORA_BVN=
 
 # Security
 JWT_SECRET=your_jwt_secret_key
@@ -190,9 +194,13 @@ pytest --cov=app --cov-report=html
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | Database connection URL | `sqlite:///fundflow.db` |
-| `KORA_BASE_URL` | Kora API base URL | `https://api.getkora.com` |
-| `KORA_API_KEY` | Kora API key | Required |
-| `KORA_WEBHOOK_SECRET` | Webhook verification secret | Required |
+| `KORA_BASE_URL` | Kora API base URL | `https://api.korapay.com/merchant/api/v1` |
+| `KORA_SECRET_KEY` | Kora secret key (live) | Required in live |
+| `KORA_PUBLIC_KEY` | Kora public key (frontend checkout) | Required in live |
+| `KORA_WEBHOOK_SECRET` | Webhook verification secret (falls back to secret key) | Required in live |
+| `KORA_MODE` | `mock` or `live` | `mock` |
+| `KORA_BANK_CODE` | Live VBA bank code (from `GET /banks`) | `000` |
+| `KORA_BVN` | KYC BVN for live NGN virtual accounts | Required in live |
 | `JWT_SECRET` | JWT signing secret | Required |
 | `CORS_ORIGIN_LIST` | Allowed CORS origins | `*` |
 | `DEBUG` | Enable debug mode | `false` |

@@ -135,7 +135,7 @@ def process_charge_event(db: Session, data: dict, event: str) -> dict:
         return {"status": "unmatched", "reference": reference}
     if contribution.status in ("SUCCESS", "REFUNDED"):
         # Domain-level idempotency on top of webhook dedup (§22).
-        return {"status": "duplicate", "reference": contribution.kora_reference}
+        return {"status": "duplicate", "reference": contribution.kora_reference, "campaign_id": contribution.campaign_id}
 
     campaign = db.get(Campaign, contribution.campaign_id)
 
@@ -149,7 +149,7 @@ def process_charge_event(db: Session, data: dict, event: str) -> dict:
             reference=contribution.kora_reference,
             commit=True,
         )
-        return {"status": "failed", "reference": contribution.kora_reference}
+        return {"status": "failed", "reference": contribution.kora_reference, "campaign_id": contribution.campaign_id}
 
     # Rule 2/§20: never trust the webhook alone — verify against Kora.
     try:
@@ -246,7 +246,7 @@ def process_charge_event(db: Session, data: dict, event: str) -> dict:
         body=f"₦{contribution.amount:,.2f} from {actor} — {campaign.title}",
     )
     db.commit()
-    return {"status": "processed", "reference": contribution.kora_reference}
+    return {"status": "processed", "reference": contribution.kora_reference, "campaign_id": contribution.campaign_id}
 
 
 

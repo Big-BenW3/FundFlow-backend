@@ -8,7 +8,7 @@ All runtime configuration is environment-driven so that:
 
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     kora_secret_key: str = ""
     # Webhook HMAC secret. Falls back to the secret key, then a dev secret.
     kora_webhook_secret: str = ""
+    # Live VBA provisioning: bank selected from GET /misc/banks, plus
+    # KYC BVN required for live NGN accounts. Mock keeps "000"/no-BVN.
+    kora_bank_code: str = "000"
+    kora_bvn: str = ""
     # Mock provider simulated merchant balance (NGN).
     mock_merchant_balance: float = 50_000_000.0
 
@@ -52,6 +56,17 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # ------------------------------------------------------------- validators
+    @model_validator(mode="after")
+    def _require_live_secrets(self) -> "Settings":
+        """Fail fast: live mode must not run on the dev webhook fallback."""
+        if self.kora_mode.strip().lower() == "live" and not (
+            self.kora_webhook_secret or self.kora_secret_key
+        ):
+            raise ValueError(
+                "KORA_MODE=live requires KORA_WEBHOOK_SECRET (or KORA_SECRET_KEY)"
+            )
+        return self
+
     @field_validator("debug", mode="before")
     @classmethod
     def _coerce_debug(cls, value: object) -> object:

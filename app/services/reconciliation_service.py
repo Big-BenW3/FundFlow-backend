@@ -26,7 +26,7 @@ def reconcile_campaign(db: Session, campaign: Campaign, actor_id: int | None = N
         db.query(Contribution)
         .filter(
             Contribution.campaign_id == campaign.id,
-            Contribution.status.in_(("SUCCESS", "FAILED")),
+            Contribution.status.in_(("SUCCESS", "FAILED", "PENDING")),
         )
         .all()
     )

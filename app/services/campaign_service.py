@@ -71,12 +71,14 @@ def ensure_collection_account(db: Session, campaign: Campaign, owner: User) -> C
     reference = f"FF-{campaign.slug.upper()[:24]}-{secrets.token_hex(3).upper()}"
     account_name = f"FundFlow {campaign.title}"[:64]
 
+    settings = kora.settings
     result = kora.create_virtual_account(
         account_name=account_name,
         account_reference=reference,
         customer_name=owner.name,
         customer_email=owner.email,
-        bank_code="000",  # sandbox bank code per Kora docs; live uses a listed bank
+        bank_code=settings.kora_bank_code or "000",
+        bvn=settings.kora_bvn or None,
     )
 
     account = CampaignAccount(
