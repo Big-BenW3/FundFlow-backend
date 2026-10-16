@@ -206,6 +206,15 @@ pytest --cov=app --cov-report=html
 | `DEBUG` | Enable debug mode | `false` |
 | `AUTO_CREATE_TABLES` | Auto-create tables on startup | `false` |
 
+## Production notes
+
+- Run a single worker (`--workers 1`) or sticky sessions: the mock-state
+  singleton and the in-memory rate limiter are per-process (dev/demo scope).
+  Multi-worker prod needs shared state (e.g. Redis) for rate limits.
+- `POST /api/v1/payouts/{id}/verify` resolves `PROCESSING`/`UNKNOWN` payouts
+  by querying Kora; `POST /api/v1/campaigns/{id}/reconcile` audits settled
+  plus `PENDING` contributions against Kora.
+
 ## Project Structure
 
 ```
